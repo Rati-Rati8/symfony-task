@@ -1,0 +1,55 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+                
+    App\Service\Client\FastForexClient:
+        arguments:
+            $apiKey: '%env(FASTFOREX_API_KEY)%'
+            
+            
+    App\Validator\Transfer\:
+        resource: '../src/Validator/Transfer/'
+        tags: ['app.transfer.validator']
+
+    App\Validator\Transfer\TransferValidatorRunner:
+        arguments:
+            $validators: !tagged_iterator app.transfer.validator
+            
+    
+    # Base class (core logic)
+    App\Service\CurrencyConversion\CurrencyConversionServiceCore: ~
+
+    # Decorator #1: Cache layer
+    App\Service\CurrencyConversion\CurrencyConversionServiceCacheDecorator:
+        decorates: App\Service\CurrencyConversion\CurrencyConversionServiceCore
+        decoration_inner_name: App\Service\CurrencyConversion\CurrencyConversionServiceCore.decorated
+        arguments:
+            $decorated: '@App\Service\CurrencyConversion\CurrencyConversionServiceCore.decorated'
+
+    # Decorator #2: Logging + fallback layer
+    App\Service\CurrencyConversion\CurrencyConversionServiceLoggingDecorator:
+        decorates: App\Service\CurrencyConversion\CurrencyConversionServiceCacheDecorator
+        decoration_inner_name: App\Service\CurrencyConversion\CurrencyConversionServiceCacheDecorator.decorated
+        arguments:
+            $decorated: '@App\Service\CurrencyConversion\CurrencyConversionServiceCacheDecorator.decorated'
+
+    App\Interfaces\CurrencyConversionServiceInterface: '@App\Service\CurrencyConversion\CurrencyConversionServiceLoggingDecorator'
+

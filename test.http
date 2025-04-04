@@ -1,0 +1,18 @@
+### Get all accounts for a client
+
+GET https://localhost/api/clients/1/accounts
+Accept: application/json
+
+###
+
+### Make a transfer
+
+POST https://localhost/api/transactions
+Content-Type: application/json
+
+{
+    "sourceAccountId": 1,
+    "targetAccountId": 2,
+    "amount": "100.00",
+    "currency": "USD"
+}
